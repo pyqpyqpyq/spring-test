@@ -3,13 +3,18 @@ package com.thoughtworks.rslist.service;
 import com.thoughtworks.rslist.domain.Trade;
 import com.thoughtworks.rslist.domain.Vote;
 import com.thoughtworks.rslist.dto.RsEventDto;
+import com.thoughtworks.rslist.dto.TradeDto;
 import com.thoughtworks.rslist.dto.UserDto;
 import com.thoughtworks.rslist.dto.VoteDto;
 import com.thoughtworks.rslist.repository.RsEventRepository;
+import com.thoughtworks.rslist.repository.TradeRepository;
+import com.thoughtworks.rslist.repository.TradeRespository;
 import com.thoughtworks.rslist.repository.UserRepository;
 import com.thoughtworks.rslist.repository.VoteRepository;
+import org.apache.tomcat.jni.Error;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 
 import java.util.Optional;
 
@@ -18,11 +23,16 @@ public class RsService {
   final RsEventRepository rsEventRepository;
   final UserRepository userRepository;
   final VoteRepository voteRepository;
+  final TradeRepository tradeRepository;
 
-  public RsService(RsEventRepository rsEventRepository, UserRepository userRepository, VoteRepository voteRepository) {
+  public RsService(RsEventRepository rsEventRepository,
+                   UserRepository userRepository,
+                   VoteRepository voteRepository,TradeRepository tradeRepository
+  ) {
     this.rsEventRepository = rsEventRepository;
     this.userRepository = userRepository;
     this.voteRepository = voteRepository;
+    this.tradeRepository=tradeRepository;
   }
 
   public void vote(Vote vote, int rsEventId) {
@@ -50,6 +60,33 @@ public class RsService {
   }
 
   public void buy(Trade trade, int id) {
+    Optional<RsEventDto> rsEventDto = rsEventRepository.findById(id);
+    Optional<UserDto> userDto = userRepository.findById(trade.getUserId());
+    Optional<TradeDto> tradeDtos = tradeRepository.findAllByRank(trade.getRank());
+    if (tradeDtos.isPresent()&&tradeDtos.get().getAmount()>=trade.getAmount()){
+      throw new RuntimeException();
+    }else{TradeDto tradeDto=TradeDto
+            .builder()
+            .amount(trade.getAmount())
+            .rsEvent(rsEventDto.get())
+            .user(userDto.get())
+            .rank(trade.getRank())
+            .build();
+    userRepository.save(userDto.get());
+    tradeRepository.save(tradeDto);
+    rsEventRepository.save(rsEventDto.get());}
 
+//    if (!tradeDtos.isPresent()){
+//      TradeDto tradeDto=TradeDto
+//            .builder()
+//            .amount(trade.getAmount())
+//            .rsEvent(rsEventDto.get())
+//            .user(userDto.get())
+//            .rank(trade.getRank())
+//            .build();
+//    userRepository.save(userDto.get());
+//    tradeRepository.save(tradeDto);
+//    rsEventRepository.save(rsEventDto.get());
+//    }
   }
 }
